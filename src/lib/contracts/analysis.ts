@@ -2,7 +2,36 @@ import { z } from 'zod';
 
 // Shared non-empty string function check
 // Takes string as input, fails when string has no non-whitespace character
-const notBlank = (message: string) => z.string().regex(/\S/, message);
+export const notBlank = (message: string) => z.string().regex(/\S/, message);
+
+// Scoring fields from (docs/scoring-model.md)
+export const FindingEffectEnum = z.enum(['exposes', 'protects']);
+
+export type FindingEffect = z.infer<typeof FindingEffectEnum>;
+
+export const RecipientTypeEnum = z.enum([
+	'service_provider',
+	'affiliate',
+	'advertiser',
+	'data_broker',
+	'government',
+	'other',
+	'unspecified'
+]);
+
+export type RecipientType = z.infer<typeof RecipientTypeEnum>;
+
+export const PurposeTypeEnum = z.enum([
+	'service',
+	'legal_security',
+	'analytics',
+	'advertising',
+	'sale',
+	'other',
+	'unspecified'
+]);
+
+export type PurposeType = z.infer<typeof PurposeTypeEnum>;
 
 // Fixed 'Category' Enum (Aligned with risk scoring requirements)
 export const FindingCategoryEnum = z.enum([
@@ -12,7 +41,7 @@ export const FindingCategoryEnum = z.enum([
 	'retention',
 	'user_rights',
 	'security_practices'
-]); // Aligned with scoring needs; DB values pending
+]);
 
 export type FindingCategory = z.infer<typeof FindingCategoryEnum>; // Extract inferred type
 
@@ -49,7 +78,13 @@ export const FindingSchema = z.object({
 	recipients: z.array(notBlank('Recipients must be stated')).default([]),
 	evidence: z
 		.array(EvidenceItemSchema)
-		.min(1, 'At least one evidence item is required to prevent uncited claims')
+		.min(1, 'At least one evidence item is required to prevent uncited claims'),
+	// scoring fields
+	effect: FindingEffectEnum.optional(),
+	ambiguous: z.boolean().optional(),
+	conditional: z.boolean().optional(),
+	recipientTypes: z.array(RecipientTypeEnum).optional(),
+	purposeTypes: z.array(PurposeTypeEnum).optional()
 });
 
 export type Finding = z.infer<typeof FindingSchema>;

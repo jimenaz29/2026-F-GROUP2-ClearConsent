@@ -3,9 +3,17 @@ import {
 	AnalysisResultSchema,
 	EvidenceItemSchema,
 	FindingSchema,
-	TakeawaySchema
+	TakeawaySchema,
+	FindingEffectEnum,
+	RecipientTypeEnum,
+	PurposeTypeEnum
 } from './analysis';
 import { successFixture, InsufficientFixture, FailureFixture, InProgressFixture } from './fixtures';
+import {
+	FINDING_EFFECTS,
+	RECIPIENT_TYPES,
+	PURPOSE_TYPES
+} from '$lib/server/analysis/consolidation/schemas';
 
 describe('AnalysisResultSchema Contract & Fixtures', () => {
 	// success runs on synthetic fixtures (4 tests)
@@ -430,5 +438,48 @@ describe('Whitespace-only text is rejected', () => {
 		};
 		const result = AnalysisResultSchema.safeParse(malformed);
 		expect(result.success).toBe(false);
+	});
+});
+
+// Scoring fields tests
+describe('Finding scoring fields', () => {
+	const base = {
+		id: 'F1',
+		category: 'sharing',
+		plain_language_description: 'Shares location with ad partners if personalized ads are on.',
+		evidence: [
+			{ passageId: 'P1', excerpt: 'We share approximate location with advertising partners.' }
+		]
+	};
+
+	it('accepts a finding with all scoring fields', () => {
+		const result = FindingSchema.safeParse({
+			...base,
+			effect: 'exposes',
+			ambiguous: false,
+			conditional: true,
+			recipientTypes: ['advertiser'],
+			purposeTypes: ['advertising']
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it('still accepts a finding without scoring fields', () => {
+		expect(FindingSchema.safeParse(base).success).toBe(true);
+	});
+
+	it('rejects unknown effect, recipient, and purpose values', () => {
+		expect(FindingSchema.safeParse({ ...base, effect: 'neutral' }).success).toBe(false);
+		expect(FindingSchema.safeParse({ ...base, recipientTypes: ['databroker'] }).success).toBe(
+			false
+		);
+		expect(FindingSchema.safeParse({ ...base, purposeTypes: ['marketing'] }).success).toBe(false);
+	});
+
+	it('matches the AI consolidation enum values', () => {
+		expect(FindingEffectEnum.options).toEqual([...FINDING_EFFECTS]);
+		expect(RecipientTypeEnum.options).toEqual([...RECIPIENT_TYPES]);
+		expect(PurposeTypeEnum.options).toEqual([...PURPOSE_TYPES]);
 	});
 });
